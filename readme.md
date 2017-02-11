@@ -1,5 +1,7 @@
 # Minotaur
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/Neamar/minotaur.svg)](https://greenkeeper.io/)
+
 ## Architecture
 ### GET /tournaments/new
 Display form. Validate data.
