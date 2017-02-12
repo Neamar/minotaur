@@ -23,6 +23,7 @@
   "dependencies": {
     "async": "^2.1.4",
     "auto-load": "^2.1.0",
+    "body-parser": "^1.16.1",
     "debug": "^2.6.0",
     "dnscache": "0.0.4",
     "dotenv": "^4.0.0",
@@ -33,6 +34,7 @@
     "mongoose": "^4.7.7",
     "newrelic": "^1.36.1",
     "opbeat": "^4.7.0",
+    "pug": "^2.0.0-beta11",
     "rarity": "^2.1.1",
     "request": "^2.79.0",
     "riot-lol-api": "^2.0.4",

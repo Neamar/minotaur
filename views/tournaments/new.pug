@@ -1,0 +1,34 @@
+html
+  head
+    title Create new tournament
+  body
+    h1 Create new tournament
+    form(method="post")
+      label(for="title") Title
+      input(name="title")
+      br
+      label(for="description") Description
+      textarea(name="description")
+      br
+      label(for="region") Region
+      select(name="region")
+        option(value"BR") BR
+        option(value"EUNE") EUNE
+        option(value"EUW") EUW
+        option(value"KR") KR
+        option(value"LAN") LAN
+        option(value"LAS") LAS
+        option(value"NA") NA
+        option(value"OCE") OCE
+        option(value"TR") TR
+        option(value"RU") RU
+      br
+      label(for="start") Start time
+      input(type="datetime-local" name="start" value=defaultStart)
+      br
+      label(for="start") End time
+      input(type="datetime-local" name="end" value=defaultEnd)
+      br
+      label(for="summoners") Summoner names (one per line)
+      textarea(name="summoners" rows="15")
+      input(type="submit")
