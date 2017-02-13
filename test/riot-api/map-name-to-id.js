@@ -4,7 +4,7 @@ var assert = require('assert');
 var nameToIds = require('../../lib/riot-api/map-name-to-ids');
 
 describe('Name to Id Mapping', function() {
-  it.only('should return the right result', function(done) {
+  it('should return the right result', function(done) {
 
     /*
 
