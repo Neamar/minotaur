@@ -12,16 +12,8 @@ html
       br
       label(for="region") Region
       select(name="region")
-        option(value"BR") BR
-        option(value"EUNE") EUNE
-        option(value"EUW") EUW
-        option(value"KR") KR
-        option(value"LAN") LAN
-        option(value"LAS") LAS
-        option(value"NA") NA
-        option(value"OCE") OCE
-        option(value"TR") TR
-        option(value"RU") RU
+        each region in regions
+          option(value=region)= region
       br
       label(for="start") Start time
       input(type="datetime-local" name="start" value=defaultStart)
