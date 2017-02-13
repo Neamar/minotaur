@@ -1,0 +1,20 @@
+[
+  {
+    "scope": "https://euw.api.pvp.net:443",
+    "method": "GET",
+    "path": "/api/lol/euw/v1.4/summoner/by-name/psykzz%2Criotneamar",
+    "body": "",
+    "status": 200,
+    "response": [
+      "1f8b0800000000000000758dc10ac23010057f45f6dc439a6c9336672f4511f10f82ae106c9292d4425bfaef46442feaf9cd9b5920da307832ce44d00bd80b68c5106b14ac006f1c8186534636871753401fc3d576d49e836f9fb41205441a6db2c16fcd900f25d6b2ae64991d2c5bd2ddb9e029ee69a40eb4606b96a4e936cfef2247c11b6cf0533ca66997e7af58895cfea8558de2c8aa3fb5f5018c3d11b4e5000000"
+    ],
+    "headers": {
+      "content-encoding": "gzip",
+      "content-type": "application/json;charset=utf-8",
+      "vary": "Accept-Encoding",
+      "x-rate-limit-count": "1:10,14:600",
+      "content-length": "164",
+      "connection": "Close"
+    }
+  }
+]

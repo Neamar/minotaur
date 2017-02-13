@@ -1,37 +1,23 @@
 "use strict";
 
 var assert = require('assert');
+
 var nameToIds = require('../../lib/riot-api/map-name-to-ids');
+var recorder = require('../mocks/recorder.js');
+
 
 describe('Name to Id Mapping', function() {
   it('should return the right result', function(done) {
-
-    /*
-
-    NOCK Info
-    response
-
-    { psykzz:
-   { summonerLevel: 30,
-     revisionDate: 1485972405000,
-     profileIconId: 1426,
-     name: 'PsyKzz',
-     id: 24329494 },
-  riotneamar:
-   { summonerLevel: 30,
-     revisionDate: 1486856143000,
-     profileIconId: 773,
-     name: 'Riot Neamar',
-     id: 70448430 } }
-
-     */
+    done = recorder.useNock(this, done);
 
     var expected = [
       {
+        id: 24329494,
         query: "psykzz",
         name: "PsyKzz"
       },
       {
+        id: 70448430,
         query: "riotneamar",
         name: "Riot Neamar"
       }
