@@ -8,7 +8,6 @@ var recorder = require('../../mocks/recorder.js');
 var app = require('../../../app.js');
 
 // Load our models
-var Participant = mongoose.model('Participant');
 var Tournament = mongoose.model('Tournament');
 
 
@@ -40,11 +39,14 @@ describe("/tournaments/new", function() {
         function validateTourn(res, cb) {
           Tournament.findOne({title: tournamentData.title}, cb);
         },
+        function validateTourn(t, cb) {
+          Tournament.findOne({title: tournamentData.title}, cb);
+        },
         function dataCorrect(t, cb) {
           assert.equal(t.title, tournamentData.title);
           cb();
         }
       ], done);
-    })
+    });
   });
 });
