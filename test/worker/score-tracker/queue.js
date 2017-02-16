@@ -4,12 +4,16 @@ var assert = require("assert");
 var mongoose = require("mongoose");
 var async = require("async");
 var sinon = require("sinon");
-var pushNotifierQueue = require('../../../lib/worker/push-notifier/queue.js');
+var rarity = require("rarity");
+var scoreTrackerQueue = require('../../../lib/worker/push-notifier/queue.js');
 
 var Tournament = mongoose.model('Tournament');
 var Participant = mongoose.model('Participant');
+var getDummyTournament = require('../../helper/dummies.js').getDummyTournament;
+var getDummyParticipant = require('../../helper/dummies.js').getDummyParticipant;
 
-describe("scoreTracker queue", function() {
+
+describe.only("scoreTracker queue", function() {
   beforeEach(function clearParticipant(done) {
     Participant.remove({}, done);
   });
@@ -19,7 +23,7 @@ describe("scoreTracker queue", function() {
   });
 
   beforeEach(function clearRedis(done) {
-    pushNotifierQueue.fjq.clearAll(done);
+    scoreTrackerQueue.fjq.clearAll(done);
   });
 
   beforeEach(function() {
@@ -30,38 +34,23 @@ describe("scoreTracker queue", function() {
     this.sandbox.restore();
   });
 
-  var getDummyToken = function() {
-    var token = new Token();
-    token.region = "euw";
-    token.summonerName = "dummysummoner";
-    token.token = "dummytoken" + getDummyToken.i;
-    token.summonerProfileId = 12;
-    token.summonerId = 123;
-
-    getDummyToken.i += 1;
-    return token;
-  };
-  getDummyToken.i = 0;
-
-  var saveDummyToken = function(t, cb) {
-    if(!cb) {
-      cb = t;
-      t = getDummyToken();
-    }
-    t.save(cb);
-  };
-
-  it("should iterate over all tokens", function(done) {
-    this.sandbox.stub(pushNotifierQueue.fjq, 'create', function(jobs, cb) {
+  it("should iterate over all active tournaments", function(done) {
+    this.sandbox.stub(scoreTrackerQueue.fjq, 'create', function(jobs, cb) {
       cb();
     });
 
     async.waterfall([
-      function(cb) {
+      function createTournament(cb) {
+        getDummyTournament().save(rarity.slice(2, cb));
+      },
+      function createParticipants(tournament, cb) {
         async.parallel([
-          saveDummyToken,
-          saveDummyToken,
-          saveDummyToken
+          function p1(cb) {
+            getDummyParticipant(tournament).save(rarity.slice(2, cb));
+          },
+          function p2(cb) {
+            getDummyParticipant(tournament).save(rarity.slice(2, cb));
+          }
         ], cb);
       },
       function(res, cb) {
@@ -71,15 +60,15 @@ describe("scoreTracker queue", function() {
         };
         options.cb = cb;
 
-        pushNotifierQueue(options);
+        scoreTrackerQueue(options);
       },
-      function(tokenCounter, cb) {
+      function(participantsCounter, cb) {
 
-        assert.equal(tokenCounter, 3);
-        // 3 tokens (in one create) + one refill = 2
-        sinon.assert.callCount(pushNotifierQueue.fjq.create, 2);
-        assert.equal(pushNotifierQueue.fjq.create.getCall(0).args[0].length, 3);
-        assert.equal(pushNotifierQueue.fjq.create.getCall(1).args[0].refillQueue, true);
+        assert.equal(participantsCounter, 2);
+        // 2 tokens (in one create) + one refill = 2
+        sinon.assert.callCount(scoreTrackerQueue.fjq.create, 2);
+        assert.equal(scoreTrackerQueue.fjq.create.getCall(0).args[0].length, 2);
+        assert.equal(scoreTrackerQueue.fjq.create.getCall(1).args[0].refillQueue, true);
 
         cb();
       },
