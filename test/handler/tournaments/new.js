@@ -24,6 +24,25 @@ describe("/tournaments/new", function() {
   });
 
   describe("POST", function() {
+    it('should require at least one user', function(done) {
+      done = recorder.useNock(this, done);
+
+      var tournamentData = {
+        region: 'euw', title: 'title1', description: 'desc1', summoners: '', start: new Date(), end: new Date()
+      };
+
+      async.waterfall([
+        function doRequest(cb) {
+          supertest(app)
+            .post('/tournaments/new')
+            .send(tournamentData)
+            .expect(400)
+            .expect(/at least one summoner/i)
+            .end(cb);
+        },
+      ], done);
+    });
+
     it('should create a tournament with valid users', function(done) {
       done = recorder.useNock(this, done);
 
