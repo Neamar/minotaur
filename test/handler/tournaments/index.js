@@ -1,38 +1,16 @@
 "use strict";
 
-var mongoose = require('mongoose');
 var async = require('async');
 var assert = require('assert');
 var supertest = require("supertest");
 var rarity = require("rarity");
 
+var getDummyTournament = require('../../helper/dummies.js').getDummyTournament;
+var getDummyParticipant = require('../../helper/dummies.js').getDummyParticipant;
 var app = require('../../../app.js');
 
 
 describe("/tournaments/:id", function() {
-  // Load our models
-  var Tournament = mongoose.model('Tournament');
-  var Participant = mongoose.model('Participant');
-
-  var getDummyTournament = function() {
-    var tournament = new Tournament();
-    tournament.title = tournament.description = "Test";
-    tournament.region = "euw";
-    tournament.startDate =  new Date();
-    tournament.endDate =  new Date(new Date().getTime() + 60000);
-    return tournament;
-  };
-
-  var getDummyParticipant = function(tournament) {
-    var participant = new Participant();
-    participant.tournament = tournament;
-    participant.name = "Participant #" + getDummyParticipant.count;
-    participant.summonerId = getDummyParticipant.count;
-    getDummyParticipant.count += 1;
-    return participant;
-  };
-  getDummyParticipant.count = 0;
-
   describe("GET", function() {
     it("should require an existing tournament code", function(done) {
       supertest(app)
