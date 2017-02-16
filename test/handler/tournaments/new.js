@@ -7,11 +7,12 @@ var supertest = require("supertest");
 var recorder = require('../../mocks/recorder.js');
 var app = require('../../../app.js');
 
-// Load our models
-var Tournament = mongoose.model('Tournament');
 
 
 describe("/tournaments/new", function() {
+  // Load our models
+  var Tournament = mongoose.model('Tournament');
+
   describe("GET", function() {
     it("should return an HTML form", function(done) {
       supertest(app)
@@ -20,7 +21,9 @@ describe("/tournaments/new", function() {
         .expect(/<form/)
         .end(done);
     });
+  });
 
+  describe("POST", function() {
     it('should create a tournament with valid users', function(done) {
       done = recorder.useNock(this, done);
 
@@ -36,10 +39,10 @@ describe("/tournaments/new", function() {
             .expect(302)
             .end(cb);
         },
-        function validateTourn(res, cb) {
+        function validateTournament(res, cb) {
           Tournament.findOne({title: tournamentData.title}, cb);
         },
-        function validateTourn(t, cb) {
+        function validateTournament(t, cb) {
           Tournament.findOne({title: tournamentData.title}, cb);
         },
         function dataCorrect(t, cb) {
