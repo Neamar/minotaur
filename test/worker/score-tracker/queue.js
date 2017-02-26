@@ -13,7 +13,7 @@ var getDummyTournament = require('../../helper/dummies.js').getDummyTournament;
 var getDummyParticipant = require('../../helper/dummies.js').getDummyParticipant;
 
 
-describe.only("scoreTracker queue", function() {
+describe("scoreTracker queue", function() {
   beforeEach(function clearParticipant(done) {
     Participant.remove({}, done);
   });
@@ -65,7 +65,7 @@ describe.only("scoreTracker queue", function() {
       function(participantsCounter, cb) {
 
         assert.equal(participantsCounter, 2);
-        // 2 tokens (in one create) + one refill = 2
+        // 2 participants (in one create) + one refill = 2
         sinon.assert.callCount(scoreTrackerQueue.fjq.create, 2);
         assert.equal(scoreTrackerQueue.fjq.create.getCall(0).args[0].length, 2);
         assert.equal(scoreTrackerQueue.fjq.create.getCall(1).args[0].refillQueue, true);

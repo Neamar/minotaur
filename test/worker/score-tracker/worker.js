@@ -7,18 +7,15 @@ var sinon = require("sinon");
 var nock = require('nock');
 var rarity = require("rarity");
 
-var pushNotifierWorker = require('../../../lib/worker/push-notifier/worker.js');
-var gameData = require('../../../lib/helper/game-data.js');
+var scoreTrackerWorker = require('../../../lib/worker/score-tracker/worker.js');
 
-var mockGameData = require('../../mocks/mocks/custom_get-spectator-game-info.json');
+var Participant = mongoose.model('Participant');
+var getDummyParticipant = require('../../helper/dummies.js').getDummyParticipant;
 
-var Token = mongoose.model('Token');
+var mockRecentData = require('../../mocks/mocks/custom_get_game_by_summoner.json');
+
 
 describe("pushNotifier worker", function() {
-  beforeEach(function clearDB(done) {
-    mongoose.model('Token').remove({}, done);
-  });
-
   beforeEach(function() {
     this.sandbox = sinon.sandbox.create();
   });
@@ -27,181 +24,104 @@ describe("pushNotifier worker", function() {
     this.sandbox.restore();
   });
 
+  it("should do nothing when games are before tournament start", function(done) {
+    var participant = getDummyParticipant();
+    participant.startDate = new Date(mockRecentData.games[0].createDate + 1500);
+    participant.endDate = new Date(participant.startDate.getTime() + 30 * 24 * 60 * 1000);
 
-  var getDummyToken = function() {
-    var token = new Token();
-    token.region = "euw";
-    token.summonerName = "dummysummoner";
-    token.token = "dummytoken";
-    token.summonerProfileId = 12;
-    token.summonerId = 123;
-    return token;
-  };
+    nock('https://euw.api.pvp.net')
+      .get('/api/lol/na/v1.3/game/by-summoner/' + participant.summonerId + '/recent')
+      .query(true)
+      .reply(200, mockRecentData);
 
-  var saveDummyToken = function(t, cb) {
-    if(!cb) {
-      cb = t;
-      t = getDummyToken();
-    }
-    t.save(cb);
-  };
-
-  var stubGcmSender = function(message, cb) {
-    process.nextTick(function() {
-      cb(null, "fakemessageid");
-    });
-  };
-
-  it("should do nothing when player is not in game", function(done) {
     async.waterfall([
-      saveDummyToken,
-      function(token, count, cb) {
-        nock('https://euw.api.pvp.net')
-          .get('/observer-mode/rest/consumer/getSpectatorGameInfo/EUW1/' + token.summonerId)
-          .query(true)
-          .reply(404, {ok: false});
-
-        pushNotifierWorker(token, cb);
+      function work(cb) {
+        scoreTrackerWorker(participant, cb);
       },
-      function(notified, cb) {
-        assert.equal(notified, 0);
+      function check(gamesCount, cb) {
+        assert.equal(gamesCount, 0);
 
         cb();
       }
     ], done);
   });
 
-  it("should send a notification when player is in game", function(done) {
-    this.sandbox.stub(gameData, 'buildExternalGameData', function() {});
-    this.sandbox.stub(pushNotifierWorker.gcm, 'send', stubGcmSender);
+  it("should do nothing when games are after tournament end", function(done) {
+    var participant = getDummyParticipant();
+    participant.endDate = new Date(mockRecentData.games[0].createDate - 1500);
+    participant.startDate = new Date(participant.endDate.getTime() - 30 * 24 * 60 * 1000);
+
+    nock('https://euw.api.pvp.net')
+      .get('/api/lol/na/v1.3/game/by-summoner/' + participant.summonerId + '/recent')
+      .query(true)
+      .reply(200, mockRecentData);
 
     async.waterfall([
-      saveDummyToken,
-      function(token, count, cb) {
-        nock('https://euw.api.pvp.net')
-          .get('/observer-mode/rest/consumer/getSpectatorGameInfo/EUW1/' + token.summonerId)
-          .query(true)
-          .reply(200, mockGameData);
-
-        pushNotifierWorker(token, rarity.carry([token], cb));
+      function work(cb) {
+        scoreTrackerWorker(participant, cb);
       },
-      function(token, notified, cb) {
-        assert.equal(notified, 1);
-        sinon.assert.calledOnce(gameData.buildExternalGameData);
-        sinon.assert.calledOnce(pushNotifierWorker.gcm.send);
-        assert.equal(pushNotifierWorker.gcm.send.firstCall.args[0].registration_id, token.token);
-        assert.equal(pushNotifierWorker.gcm.send.firstCall.args[0]['data.gameId'], mockGameData.gameId);
-
-        cb(null, token);
-      },
-      function reloadToken(token, cb) {
-        Token.findById(token._id, cb);
-      },
-      function ensureTokenHasBeenUpdated(token, cb) {
-        assert.equal(token.inGame, true);
-        assert.equal(token.lastKnownGameId, mockGameData.gameId);
+      function check(gamesCount, cb) {
+        assert.equal(gamesCount, 0);
 
         cb();
       }
     ], done);
   });
 
-  it("should not send a notification when player is already in game", function(done) {
-    var token = getDummyToken();
-    token.inGame = true;
-    token.lastKnownGameId = mockGameData.gameId;
+  it("should do nothing when last game is already saved", function(done) {
+    var participant = getDummyParticipant();
+    participant.startDate = new Date(mockRecentData.games[0].createDate - 1500);
+    participant.endDate = new Date(participant.startDate.getTime() + 30 * 24 * 60 * 1000);
+    participant.lastKnownGameId = mockRecentData.games[0].gameId;
 
-    this.sandbox.stub(gameData, 'buildExternalGameData', function() {});
-    this.sandbox.stub(pushNotifierWorker.gcm, 'send', stubGcmSender);
+    nock('https://euw.api.pvp.net')
+      .get('/api/lol/na/v1.3/game/by-summoner/' + participant.summonerId + '/recent')
+      .query(true)
+      .reply(200, mockRecentData);
 
     async.waterfall([
-      async.apply(saveDummyToken, token),
-      function(token, count, cb) {
-        nock('https://euw.api.pvp.net')
-          .get('/observer-mode/rest/consumer/getSpectatorGameInfo/EUW1/' + token.summonerId)
-          .query(true)
-          .reply(200, mockGameData);
-
-        pushNotifierWorker(token, cb);
+      function work(cb) {
+        scoreTrackerWorker(participant, cb);
       },
-      function(notified, cb) {
-        assert.equal(notified, 0);
-        assert.equal(gameData.buildExternalGameData.callCount, 0);
-        assert.equal(pushNotifierWorker.gcm.send.callCount, 0);
+      function check(gamesCount, cb) {
+        assert.equal(gamesCount, 0);
 
         cb();
       }
     ], done);
   });
 
-  it("should send a notification when player is out of game", function(done) {
-    var token = getDummyToken();
-    token.inGame = true;
-    token.lastKnownGameId = 123456;
+  it("should save games within tournament date", function(done) {
+    var participant = getDummyParticipant("58b1e0ef1e758c42792ed55c");
+    participant.startDate = new Date(mockRecentData.games[8].createDate);
+    participant.endDate = new Date(mockRecentData.games[2].createDate);
+    participant.lastKnownGameId = -1;
 
-    this.sandbox.stub(pushNotifierWorker.gcm, 'send', stubGcmSender);
-
-    async.waterfall([
-      async.apply(saveDummyToken, token),
-      function(token, count, cb) {
-        nock('https://euw.api.pvp.net')
-          .get('/observer-mode/rest/consumer/getSpectatorGameInfo/EUW1/' + token.summonerId)
-          .query(true)
-          .reply(404, {ok: false});
-
-        pushNotifierWorker(token, rarity.carry([token], cb));
-      },
-      function(token, notified, cb) {
-        assert.equal(notified, 0);
-        sinon.assert.calledOnce(pushNotifierWorker.gcm.send);
-        assert.equal(pushNotifierWorker.gcm.send.firstCall.args[0].registration_id, token.token);
-        assert.equal(pushNotifierWorker.gcm.send.firstCall.args[0]['data.removeGameId'], token.lastKnownGameId);
-
-        cb(null, token);
-      },
-      function reloadToken(token, cb) {
-        Token.findById(token._id, cb);
-      },
-      function ensureTokenHasBeenUpdated(reloadedToken, cb) {
-        assert.equal(reloadedToken.inGame, false);
-        assert.equal(reloadedToken.lastKnownGameId, token.lastKnownGameId);
-
-        cb();
-      }
-    ], done);
-  });
-
-  it("should remove token when not registered on GCM anymore", function(done) {
-    this.sandbox.stub(gameData, 'buildExternalGameData', function() {});
-    this.sandbox.stub(pushNotifierWorker.gcm, 'send', function(message, cb) {
-      process.nextTick(function() {
-        cb(new Error("NotRegistered error"));
-      });
-    });
+    nock('https://euw.api.pvp.net')
+      .get('/api/lol/euw/v1.3/game/by-summoner/' + participant.summonerId + '/recent')
+      .query(true)
+      .reply(200, mockRecentData);
 
     async.waterfall([
-      saveDummyToken,
-      function(token, count, cb) {
-        nock('https://euw.api.pvp.net')
-          .get('/observer-mode/rest/consumer/getSpectatorGameInfo/EUW1/' + token.summonerId)
-          .query(true)
-          .reply(200, mockGameData);
+      function save(cb) {
+        participant.save(cb);
+      },
+      function work(p, count, cb) {
+        scoreTrackerWorker(participant, rarity.carry([p], cb));
+      },
+      function check(p, gamesCount, cb) {
+        // There is a custom game in the mock dataset, so 5 - 1
+        assert.equal(gamesCount, 4);
 
-        pushNotifierWorker(token, rarity.carry([token], cb));
+        cb(null, p);
       },
-      function(token, notified, cb) {
-        assert.equal(notified, 0);
-        sinon.assert.calledOnce(pushNotifierWorker.gcm.send);
-
-        process.nextTick(function() {
-          cb(null, token);
-        });
+      function reloadParticipant(p, cb) {
+        Participant.findById(p._id, cb);
       },
-      function reloadToken(token, cb) {
-        Token.findById(token._id, cb);
-      },
-      function ensureTokenHasBeenRemoved(token, cb) {
-        assert.equal(token, null);
+      function ensureParticipantWasUpdated(p, cb) {
+        assert.equal(p.lastKnownGameId, mockRecentData.games[3].gameId);
+        assert.equal(p.games.length, 4);
+        assert.equal(p.games[0].id, mockRecentData.games[3].gameId);
 
         cb();
       }
