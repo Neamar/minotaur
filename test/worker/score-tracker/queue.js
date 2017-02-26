@@ -5,7 +5,7 @@ var mongoose = require("mongoose");
 var async = require("async");
 var sinon = require("sinon");
 var rarity = require("rarity");
-var scoreTrackerQueue = require('../../../lib/worker/push-notifier/queue.js');
+var scoreTrackerQueue = require('../../../lib/worker/score-tracker/queue.js');
 
 var Tournament = mongoose.model('Tournament');
 var Participant = mongoose.model('Participant');
