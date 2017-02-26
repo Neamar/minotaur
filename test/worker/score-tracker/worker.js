@@ -16,6 +16,11 @@ var mockRecentData = require('../../mocks/mocks/custom_get_game_by_summoner.json
 
 
 describe("pushNotifier worker", function() {
+  beforeEach(function clearParticipant(done) {
+    Participant.remove({}, done);
+  });
+
+
   beforeEach(function() {
     this.sandbox = sinon.sandbox.create();
   });
@@ -122,6 +127,42 @@ describe("pushNotifier worker", function() {
         assert.equal(p.lastKnownGameId, mockRecentData.games[3].gameId);
         assert.equal(p.games.length, 4);
         assert.equal(p.games[0].id, mockRecentData.games[3].gameId);
+
+        cb();
+      }
+    ], done);
+  });
+
+  it("should save new games", function(done) {
+    var participant = getDummyParticipant("58b1e0ef1e758c42792ed55c");
+    participant.startDate = new Date(0);
+    participant.endDate = new Date();
+    participant.lastKnownGameId = mockRecentData.games[4].gameId;
+
+    nock('https://euw.api.pvp.net')
+      .get('/api/lol/euw/v1.3/game/by-summoner/' + participant.summonerId + '/recent')
+      .query(true)
+      .reply(200, mockRecentData);
+
+    async.waterfall([
+      function save(cb) {
+        participant.save(cb);
+      },
+      function work(p, count, cb) {
+        scoreTrackerWorker(participant, rarity.carry([p], cb));
+      },
+      function check(p, gamesCount, cb) {
+        assert.equal(gamesCount, 4);
+
+        cb(null, p);
+      },
+      function reloadParticipant(p, cb) {
+        Participant.findById(p._id, cb);
+      },
+      function ensureParticipantWasUpdated(p, cb) {
+        assert.equal(p.lastKnownGameId, mockRecentData.games[0].gameId);
+        assert.equal(p.games.length, 4);
+        assert.equal(p.games[0].id, mockRecentData.games[0].gameId);
 
         cb();
       }
